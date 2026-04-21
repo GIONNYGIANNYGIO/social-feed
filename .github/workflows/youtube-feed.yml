@@ -25,14 +25,21 @@ jobs:
 
           const items = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map(m => {
             const block = m[1];
-            const title = (block.match(/<title>(.*?)<\/title>/) || [])[1] || '';
+
+            const title = (block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ||
+                            block.match(/<title>(.*?)<\/title>/) || [])[1] || '';
+
             const id = (block.match(/<yt:videoId>(.*?)<\/yt:videoId>/) || [])[1] || '';
             const pubDate = (block.match(/<published>(.*?)<\/published>/) || [])[1] || '';
+
+            const description = (block.match(/<media:description><!\[CDATA\[(.*?)\]\]><\/media:description>/) ||
+                                 block.match(/<media:description>(.*?)<\/media:description>/) || [])[1] || '';
 
             return {
               title,
               guid: id,
-              pubDate
+              pubDate,
+              description
             };
           });
 
@@ -44,5 +51,5 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add feed.json
-          git commit -m "update feed" || echo "no changes"
+          git commit -m "update feed" || exit 0
           git push
