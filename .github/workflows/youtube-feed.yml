@@ -1,0 +1,48 @@
+name: Update YouTube Feed
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  update-feed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Fetch YouTube RSS
+        run: |
+          curl -s "https://www.youtube.com/feeds/videos.xml?channel_id=UCTjO-uHcWNJ-TOp187kQzUg" -o feed.xml
+
+      - name: Convert XML to JSON
+        run: |
+          node -e "
+          const fs = require('fs');
+          const xml = fs.readFileSync('feed.xml', 'utf8');
+
+          const items = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map(m => {
+            const block = m[1];
+            const title = (block.match(/<title>(.*?)<\/title>/) || [])[1] || '';
+            const id = (block.match(/<yt:videoId>(.*?)<\/yt:videoId>/) || [])[1] || '';
+            const pubDate = (block.match(/<published>(.*?)<\/published>/) || [])[1] || '';
+
+            return {
+              title,
+              guid: id,
+              pubDate
+            };
+          });
+
+          fs.writeFileSync('feed.json', JSON.stringify(items, null, 2));
+          "
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add feed.json
+          git commit -m "update feed" || echo "no changes"
+          git push
