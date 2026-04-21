@@ -17,23 +17,33 @@ jobs:
         run: |
           curl -s "https://www.youtube.com/feeds/videos.xml?channel_id=UCTjO-uHcWNJ-TOp187kQzUg" -o feed.xml
 
-      - name: Convert XML to JSON
+      - name: Convert XML to JSON + SEO descriptions
         run: |
           node -e "
           const fs = require('fs');
           const xml = fs.readFileSync('feed.xml', 'utf8');
 
+          function generateSEODescription(title) {
+            if (!title) return '';
+            return 'Watch ' + title +
+            ' - automotive JDM content, car culture, tuning, performance builds and street cars. ' +
+            'Stay updated with 100 Ottani Please™ for exclusive automotive videos and car meets.';
+          }
+
           const items = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map(m => {
             const block = m[1];
 
-            const title = (block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ||
-                            block.match(/<title>(.*?)<\/title>/) || [])[1] || '';
+            const title =
+              (block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ||
+               block.match(/<title>(.*?)<\/title>/) || [])[1] || '';
 
-            const id = (block.match(/<yt:videoId>(.*?)<\/yt:videoId>/) || [])[1] || '';
-            const pubDate = (block.match(/<published>(.*?)<\/published>/) || [])[1] || '';
+            const id =
+              (block.match(/<yt:videoId>(.*?)<\/yt:videoId>/) || [])[1] || '';
 
-            const description = (block.match(/<media:description><!\[CDATA\[(.*?)\]\]><\/media:description>/) ||
-                                 block.match(/<media:description>(.*?)<\/media:description>/) || [])[1] || '';
+            const pubDate =
+              (block.match(/<published>(.*?)<\/published>/) || [])[1] || '';
+
+            const description = generateSEODescription(title);
 
             return {
               title,
